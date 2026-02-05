@@ -13,25 +13,62 @@ body {
   align-items: center;
   height: 100vh;
   font-family: Arial, sans-serif;
+  user-select: none;
 }
 canvas {
   background: linear-gradient(to bottom, #A0E7E5, #B4F8C8); /* Lys grønn bakgrunn */
-  border: 3px solid #FF69B4; /* rosa kant */
+  border: 3px solid #FF69B4; 
   box-shadow: 0 0 20px #FF69B4;
+}
+button {
+  padding: 10px 20px;
+  font-size: 18px;
+  margin: 10px;
+  cursor: pointer;
+  border: none;
+  border-radius: 5px;
+  transition: 0.2s;
+}
+button:hover {
+  background-color: #FFD700;
+}
+#ui-container {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+.progress-bar {
+  width: 900px;
+  height: 10px;
+  background: #ddd;
+  border: 2px solid #333;
+  margin-bottom: 5px;
+  border-radius: 5px;
+}
+.progress-fill {
+  height: 100%;
+  background: #FF69B4;
+  width: 0%;
+  border-radius: 5px;
 }
 </style>
 </head>
 <body>
 
 <canvas id="game" width="900" height="350"></canvas>
+<div id="ui-container"></div>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+const ui = document.getElementById("ui-container");
 
-let state = "menu"; // menu, levels, play
+let state = "menu"; // menu, levels, play, pause, gameover
 let currentLevel = 0;
-const speed = 4; // hvor fort spillet går fremover
+const speed = 4;
+const totalDistance = 1200; // enkel simulering av lengde
 
 const levels = [
   { name: "Level 1 – Stereo Start", spikes: [400, 550, 700] },
@@ -46,34 +83,108 @@ let player = {
   dy: 0,
   gravity: 0.9,
   angle: 0,
-  alive: true
+  alive: true,
+  distance: 0 // progresjon
 };
 
-document.addEventListener("keydown", () => {
+// UI Buttons
+let buttons = [];
+
+function createButton(text, onClick) {
+  const btn = document.createElement("button");
+  btn.innerText = text;
+  btn.onclick = onClick;
+  ui.appendChild(btn);
+  buttons.push(btn);
+  return btn;
+}
+
+function clearButtons() {
+  buttons.forEach(b => ui.removeChild(b));
+  buttons = [];
+}
+
+// Key handling
+document.addEventListener("keydown", (e) => {
   if (state === "menu") state = "levels";
   else if (state === "levels") {
     currentLevel = 0;
     startLevel();
   } else if (state === "play") {
-    if (player.y >= 260) {
-      player.dy = -15; // hopp
-    }
+    if (e.code === "Escape") togglePause();
+    else if (player.y >= 260) player.dy = -15; // hopp
+  } else if (state === "pause") {
+    if (e.code === "Escape") resumeGame();
   }
 });
 
+// Start eller reset nivå
 function startLevel() {
   state = "play";
   player.y = 260;
   player.dy = 0;
   player.angle = 0;
   player.alive = true;
-
-  // Kopier spikes for dette nivået
+  player.distance = 0;
   levels[currentLevel].spikes = [...levels[currentLevel].spikes];
+  clearButtons();
+  createProgressBar();
 }
 
+// Pause
+function togglePause() {
+  if (state !== "play") return;
+  state = "pause";
+  clearButtons();
+  createPauseMenu();
+}
+
+function resumeGame() {
+  state = "play";
+  clearButtons();
+  createProgressBar();
+}
+
+// Game Over
+function gameOver() {
+  state = "gameover";
+  clearButtons();
+  createGameOverMenu();
+}
+
+// Progress bar
+let progressFill;
+function createProgressBar() {
+  const container = document.createElement("div");
+  container.className = "progress-bar";
+  progressFill = document.createElement("div");
+  progressFill.className = "progress-fill";
+  progressFill.style.width = (player.distance / totalDistance * 100) + "%";
+  container.appendChild(progressFill);
+  ui.appendChild(container);
+}
+
+// Menyer
+function createGameOverMenu() {
+  createButton("Restart", () => startLevel());
+  createButton("Main Menu", () => {
+    state = "menu";
+    clearButtons();
+  });
+}
+
+function createPauseMenu() {
+  createButton("Resume", resumeGame);
+  createButton("Restart", startLevel);
+  createButton("Main Menu", () => {
+    state = "menu";
+    clearButtons();
+  });
+}
+
+// Tegning
 function drawMenu() {
-  ctx.fillStyle = "#FF1493"; // Neon rosa
+  ctx.fillStyle = "#FF1493";
   ctx.font = "48px Arial";
   ctx.fillText("GEOMETRY DASH", 180, 150);
   ctx.font = "20px Arial";
@@ -81,7 +192,7 @@ function drawMenu() {
 }
 
 function drawLevels() {
-  ctx.fillStyle = "#00008B"; // mørk blå tekst
+  ctx.fillStyle = "#00008B";
   ctx.font = "32px Arial";
   ctx.fillText("Select Level", 330, 80);
   levels.forEach((l, i) => {
@@ -95,13 +206,13 @@ function drawPlayer() {
   ctx.save();
   ctx.translate(player.x + 15, player.y + 15);
   ctx.rotate(player.angle);
-  ctx.fillStyle = "#FFD700"; // Gullfarge
+  ctx.fillStyle = "#FFD700";
   ctx.fillRect(-15, -15, 30, 30);
   ctx.restore();
 }
 
 function drawSpikes(level) {
-  ctx.fillStyle = "#FF4500"; // Orange-red spikes
+  ctx.fillStyle = "#FF4500";
   level.spikes.forEach(x => {
     ctx.beginPath();
     ctx.moveTo(x, 300);
@@ -109,51 +220,43 @@ function drawSpikes(level) {
     ctx.lineTo(x + 40, 300);
     ctx.fill();
 
-    // Kollisjon
-    if (
-      player.x + player.size > x &&
-      player.x < x + 40 &&
-      player.y + player.size > 260
-    ) {
+    if (player.x + player.size > x &&
+        player.x < x + 40 &&
+        player.y + player.size > 260) {
       player.alive = false;
+      gameOver();
     }
   });
 }
 
+// Main loop
 function update() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
   if (state === "menu") drawMenu();
   else if (state === "levels") drawLevels();
   else if (state === "play") {
-    if (!player.alive) {
-      ctx.fillStyle = "#FF0000";
-      ctx.font = "40px Arial";
-      ctx.fillText("YOU DIED", 350, 180);
-      ctx.font = "20px Arial";
-      ctx.fillText("Refresh to retry", 360, 220);
-      return;
-    }
-
-    // Hopp og tyngdekraft
+    // Oppdater spilleren
     player.dy += player.gravity;
     player.y += player.dy;
 
     if (player.y >= 260) {
       player.y = 260;
       player.dy = 0;
-    } else {
-      player.angle += 0.15; // roterer mens i luften
-    }
+    } else player.angle += 0.15;
 
-    // Flytt spikes mot venstre for å simulere fremdrift
+    // Rull spikes
     levels[currentLevel].spikes = levels[currentLevel].spikes.map(x => x - speed);
+
+    // Oppdater distance
+    player.distance += speed;
+    if (progressFill) progressFill.style.width = (player.distance / totalDistance * 100) + "%";
 
     drawPlayer();
     drawSpikes(levels[currentLevel]);
 
     // Tegn bakken
-    ctx.fillStyle = "#32CD32"; // lys grønn
+    ctx.fillStyle = "#32CD32";
     ctx.fillRect(0, 300, canvas.width, 4);
   }
 
