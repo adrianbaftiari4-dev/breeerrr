@@ -1,0 +1,117 @@
+index.html
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <title>Mini Geometry Dash</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    canvas {
+      background: #1e1e1e;
+      border: 3px solid white;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="game" width="800" height="300"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let player = {
+  x: 100,
+  y: 230,
+  size: 30,
+  dy: 0,
+  gravity: 1,
+  jump: -15,
+  grounded: true
+};
+
+let spikes = [];
+let speed = 5;
+let alive = true;
+
+function spawnSpike() {
+  spikes.push({
+    x: canvas.width,
+    y: 260,
+    width: 30,
+    height: 40
+  });
+}
+
+setInterval(spawnSpike, 1500);
+
+document.addEventListener("keydown", () => {
+  if (player.grounded) {
+    player.dy = player.jump;
+    player.grounded = false;
+  }
+  if (!alive) location.reload();
+});
+
+function update() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Player
+  player.dy += player.gravity;
+  player.y += player.dy;
+
+  if (player.y >= 230) {
+    player.y = 230;
+    player.dy = 0;
+    player.grounded = true;
+  }
+
+  ctx.fillStyle = "cyan";
+  ctx.fillRect(player.x, player.y, player.size, player.size);
+
+  // Spikes
+  ctx.fillStyle = "red";
+  spikes.forEach(spike => {
+    spike.x -= speed;
+    ctx.fillRect(spike.x, spike.y, spike.width, spike.height);
+
+    // Collision
+    if (
+      player.x < spike.x + spike.width &&
+      player.x + player.size > spike.x &&
+      player.y < spike.y + spike.height &&
+      player.y + player.size > spike.y
+    ) {
+      alive = false;
+    }
+  });
+
+  // Ground
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 260, canvas.width, 5);
+
+  if (!alive) {
+    ctx.fillStyle = "white";
+    ctx.font = "40px Arial";
+    ctx.fillText("YOU DIED", 300, 150);
+    ctx.font = "20px Arial";
+    ctx.fillText("Trykk en tast for restart", 280, 190);
+    return;
+  }
+
+  requestAnimationFrame(update);
+}
+
+update();
+</script>
+
+</body>
+</html>
+ 
