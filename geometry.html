@@ -3,7 +3,7 @@ index.html
 <html lang="no">
 <head>
 <meta charset="UTF-8">
-<title>Geometry Dash – Advanced Edition</title>
+<title>Geometry Dash – Endless Edition</title>
 <style>
 body {
   margin: 0;
@@ -71,37 +71,10 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const ui = document.getElementById("ui-container");
 
-let state = "menu"; // menu, levels, play, pause, gameover, levelcomplete
-let currentLevel = 0;
+let state = "menu"; // menu, play, pause, gameover, levelcomplete
 const speed = 4;
-const totalDistance = 2000;
 
 let deathCount = 0;
-
-// Objekttyper: spikeSmall, spikeLarge, block, checkpoint, goal
-const levels = [
-  {
-    name: "Level 1 – Stereo Start",
-    objects: [
-      {type:"spikeSmall", x:400, y:280},
-      {type:"spikeSmall", x:550, y:280},
-      {type:"spikeLarge", x:700, y:260},
-      {type:"block", x:800, y:260, width:40, height:40},
-      {type:"checkpoint", x:900, y:260},
-      {type:"goal", x:1200, y:260}
-    ]
-  },
-  {
-    name: "Level 2 – Air Trouble",
-    objects: [
-      {type:"spikeSmall", x:300, y:280},
-      {type:"spikeLarge", x:450, y:260},
-      {type:"block", x:500, y:260, width:40, height:40},
-      {type:"checkpoint", x:800, y:260},
-      {type:"goal", x:1500, y:260}
-    ]
-  }
-];
 
 let player = {
   x: 120,
@@ -111,14 +84,19 @@ let player = {
   gravity: 0.9,
   angle: 0,
   alive: true,
-  distance: 0,
-  checkpoint: {x:120, y:260}
+  checkpoint: {x:120, y:260},
+  distance:0
 };
 
+// Endless level data
+let objects = [];
+let lastGeneratedX = 900; // hvor langt vi har generert
+const segmentLength = 400;
+
+// UI
 let buttons = [];
 let progressFill;
 
-// UI funksjoner
 function createButton(text, onClick) {
   const btn = document.createElement("button");
   btn.innerText = text;
@@ -128,132 +106,124 @@ function createButton(text, onClick) {
   return btn;
 }
 
-function clearButtons() {
-  buttons.forEach(b => ui.removeChild(b));
-  buttons = [];
+function clearButtons(){
+  buttons.forEach(b=>ui.removeChild(b));
+  buttons=[];
 }
 
-function createProgressBar() {
+function createProgressBar(){
   const container = document.createElement("div");
-  container.className = "progress-bar";
-  progressFill = document.createElement("div");
-  progressFill.className = "progress-fill";
-  progressFill.style.width = (player.distance / totalDistance * 100) + "%";
+  container.className="progress-bar";
+  progressFill=document.createElement("div");
+  progressFill.className="progress-fill";
   container.appendChild(progressFill);
   ui.appendChild(container);
 }
 
-function updateProgress() {
-  if(progressFill) progressFill.style.width = Math.min(player.distance/totalDistance*100,100)+"%";
+function updateProgress(){
+  if(progressFill) progressFill.style.width=Math.min(player.distance/2000*100,100)+"%";
 }
 
-function createDeathCounter() {
-  const counter = document.createElement("div");
-  counter.className = "death-counter";
-  counter.id = "death-counter";
-  counter.innerText = "Deaths: "+deathCount;
+function createDeathCounter(){
+  const counter=document.createElement("div");
+  counter.className="death-counter";
+  counter.id="death-counter";
+  counter.innerText="Deaths: "+deathCount;
   ui.appendChild(counter);
 }
 
-function updateDeathCounter() {
-  const counter = document.getElementById("death-counter");
-  if(counter) counter.innerText = "Deaths: "+deathCount;
+function updateDeathCounter(){
+  const counter=document.getElementById("death-counter");
+  if(counter) counter.innerText="Deaths: "+deathCount;
 }
 
-// Start nivå
-function startLevel() {
-  state = "play";
-  player.y = 260;
-  player.dy = 0;
-  player.angle = 0;
-  player.alive = true;
-  player.distance = 0;
-  player.checkpoint = {x:120, y:260};
+// Start spill
+function startGame(){
+  state="play";
+  player.y=260;
+  player.dy=0;
+  player.angle=0;
+  player.alive=true;
+  player.distance=0;
+  player.checkpoint={x:120, y:260};
+  objects=[];
+  lastGeneratedX=900;
   clearButtons();
   createProgressBar();
   createDeathCounter();
-  // Kopier objekter
-  levels[currentLevel].objects = [...levels[currentLevel].objects];
+  generateSegment(); // start første segment
 }
 
 // Pause
-function togglePause() {
-  if (state !== "play") return;
-  state = "pause";
+function togglePause(){
+  if(state!=="play") return;
+  state="pause";
   clearButtons();
   createPauseMenu();
 }
-
-function resumeGame() {
-  state = "play";
+function resumeGame(){
+  state="play";
   clearButtons();
   createProgressBar();
   createDeathCounter();
 }
 
 // Game Over
-function gameOver() {
+function gameOver(){
   deathCount++;
   updateDeathCounter();
-  state = "gameover";
+  state="gameover";
   clearButtons();
   createGameOverMenu();
 }
 
-function createGameOverMenu() {
-  createButton("Restart", () => startLevel());
-  createButton("Main Menu", () => {
-    state="menu";
-    clearButtons();
-  });
+function createGameOverMenu(){
+  createButton("Restart", startGame);
+  createButton("Main Menu", ()=>{state="menu"; clearButtons();});
 }
 
-function createPauseMenu() {
+function createPauseMenu(){
   createButton("Resume", resumeGame);
-  createButton("Restart", startLevel);
-  createButton("Main Menu", () => {state="menu"; clearButtons();});
-}
-
-function createLevelCompleteMenu() {
-  clearButtons();
-  createButton("Next Level", () => {
-    currentLevel++;
-    if(currentLevel>=levels.length) currentLevel=0;
-    startLevel();
-  });
+  createButton("Restart", startGame);
+  createButton("Main Menu", ()=>{state="menu"; clearButtons();});
 }
 
 // Key handling
-document.addEventListener("keydown", e => {
-  if (state === "menu") state = "levels";
-  else if (state === "levels") { startLevel(); }
-  else if (state === "play") {
+document.addEventListener("keydown", e=>{
+  if(state==="menu") startGame();
+  else if(state==="play"){
     if(e.code==="Escape") togglePause();
-    else if(player.y >= 260) player.dy=-15;
-  } else if(state==="pause") {
-    if(e.code==="Escape") resumeGame();
-  }
+    else if(player.y>=260) player.dy=-15;
+  }else if(state==="pause" && e.code==="Escape") resumeGame();
 });
 
+// Generer nye nivåsegmenter
+function generateSegment(){
+  const types=["spikeSmall","spikeLarge","block","checkpoint"];
+  let x = lastGeneratedX;
+  for(let i=0;i<8;i++){
+    const type = types[Math.floor(Math.random()*types.length)];
+    const y = type==="block"?260-Math.floor(Math.random()*3)*40:260;
+    if(type==="checkpoint" && i!==0) objects.push({type:"checkpoint", x:x, y:260});
+    else if(type==="spikeSmall"||type==="spikeLarge") objects.push({type:type, x:x, y:y});
+    else if(type==="block") objects.push({type:"block", x:x, y:y, width:40, height:40});
+    x += segmentLength/8;
+  }
+  lastGeneratedX=x;
+  // Goal på slutten av segment (valgfritt)
+  objects.push({type:"goal", x:lastGeneratedX, y:260});
+}
+
 // Tegning
-function drawMenu() {
-  ctx.fillStyle = "#FF1493";
-  ctx.font = "48px Arial";
-  ctx.fillText("GEOMETRY DASH", 180, 150);
-  ctx.font = "20px Arial";
-  ctx.fillText("Press any key to start", 300, 200);
+function drawMenu(){
+  ctx.fillStyle="#FF1493";
+  ctx.font="48px Arial";
+  ctx.fillText("GEOMETRY DASH",180,150);
+  ctx.font="20px Arial";
+  ctx.fillText("Press any key to start",300,200);
 }
 
-function drawLevels() {
-  ctx.fillStyle = "#00008B";
-  ctx.font = "32px Arial";
-  ctx.fillText("Select Level", 330, 80);
-  levels.forEach((l,i)=>ctx.fillText(`${i+1}. ${l.name}`,250,140+i*50));
-  ctx.font="16px Arial";
-  ctx.fillText("Press any key to start", 330, 300);
-}
-
-function drawPlayer() {
+function drawPlayer(){
   ctx.save();
   ctx.translate(player.x+15,player.y+15);
   ctx.rotate(player.angle);
@@ -262,8 +232,8 @@ function drawPlayer() {
   ctx.restore();
 }
 
-function drawObjects() {
-  levels[currentLevel].objects.forEach(obj=>{
+function drawObjects(){
+  objects.forEach(obj=>{
     if(obj.type==="spikeSmall"||obj.type==="spikeLarge"){
       ctx.fillStyle=obj.type==="spikeSmall"?"#FF4500":"#FF0000";
       const h=obj.type==="spikeSmall"?20:40;
@@ -273,7 +243,6 @@ function drawObjects() {
       ctx.lineTo(obj.x+40,300);
       ctx.fill();
       if(player.x+player.size>obj.x && player.x<obj.x+40 && player.y+player.size>300-h){
-        // Spawn på checkpoint
         player.x=player.checkpoint.x;
         player.y=player.checkpoint.y;
         player.dy=0;
@@ -304,29 +273,36 @@ function drawObjects() {
       ctx.fillRect(obj.x,obj.y-40,30,40);
       if(player.x+player.size>obj.x && player.x<obj.x+30 && player.y+player.size>obj.y-40){
         state="levelcomplete";
-        createLevelCompleteMenu();
+        clearButtons();
+        createButton("Next Segment", ()=>{
+          generateSegment();
+          state="play";
+          clearButtons();
+          createProgressBar();
+        });
       }
     }
   });
 }
 
-// Hovedloop
+// Main loop
 function update(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
   if(state==="menu") drawMenu();
-  else if(state==="levels") drawLevels();
   else if(state==="play"){
-    // Hopp
     player.dy+=player.gravity;
     player.y+=player.dy;
     if(player.y>=260){player.y=260; player.dy=0;} else player.angle+=0.15;
 
-    // Rull objekter
-    levels[currentLevel].objects.forEach(obj=>obj.x-=speed);
-
+    objects.forEach(obj=>obj.x-=speed);
     player.distance+=speed;
     updateProgress();
+
+    // Generer nytt segment hvis siste mål nærmer seg skjerm
+    if(objects.length && objects[objects.length-1].x<canvas.width+200){
+      generateSegment();
+    }
 
     drawPlayer();
     drawObjects();
