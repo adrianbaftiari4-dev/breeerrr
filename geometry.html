@@ -1,38 +1,38 @@
-index.html
+index.htmlx
 <!DOCTYPE html>
 <html lang="no">
 <head>
 <meta charset="UTF-8">
-<title>Geometry Dash – Pro Edition</title>
+<title>Adrian's geodash</title>
 <style>
-  body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Courier New', Courier, monospace; overflow: hidden; }
-  canvas { border: 2px solid #555; box-shadow: 0 0 50px rgba(0,255,255,0.2); background: #050505; }
+  body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+  canvas { border: 3px solid #333; box-shadow: 0 0 60px rgba(0,255,255,0.1); background: #020205; }
   #ui { position: absolute; text-align: center; pointer-events: none; width: 900px; height: 350px; color: white; }
-  .menu { pointer-events: auto; background: rgba(0,0,0,0.9); padding: 30px; border: 2px solid #00ffff; border-radius: 20px; margin-top: 40px; }
-  button { padding: 15px 30px; font-size: 20px; cursor: pointer; border: none; background: #00ffff; color: #000; font-weight: bold; margin: 10px; border-radius: 5px; transition: 0.3s; }
-  button:hover { background: #ff00ff; transform: scale(1.1); box-shadow: 0 0 20px #ff00ff; }
-  .stats { position: absolute; top: 15px; width: 100%; display: flex; flex-direction: column; align-items: center; }
-  .bar-bg { width: 70%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; }
-  #bar-fill { width: 0%; height: 100%; background: cyan; box-shadow: 0 0 10px cyan; }
+  .menu { pointer-events: auto; background: rgba(0,0,0,0.95); padding: 40px; border: 2px solid cyan; border-radius: 10px; }
+  button { padding: 15px 40px; font-size: 22px; cursor: pointer; border: none; background: cyan; color: black; font-weight: bold; margin: 10px; border-radius: 5px; transition: 0.2s; }
+  button:hover { background: #fff; transform: translateY(-3px); box-shadow: 0 5px 15px cyan; }
+  .hud { position: absolute; top: 20px; width: 100%; display: flex; flex-direction: column; align-items: center; }
+  .bar-container { width: 80%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+  #fill { width: 0%; height: 100%; background: linear-gradient(90deg, cyan, magenta); }
 </style>
 </head>
 <body>
 
 <div id="ui">
-  <div id="hud" class="stats" style="display:none;">
-    <div class="bar-bg"><div id="bar-fill"></div></div>
-    <div id="death-text">DEATHS: 0</div>
+  <div id="hud" class="hud" style="display:none;">
+    <div class="bar-container"><div id="fill"></div></div>
+    <div id="stats" style="margin-top:10px; font-weight:bold; letter-spacing:2px;">ADRIAN'S GEODASH - DEATHS: 0</div>
   </div>
   
   <div id="main-menu" class="menu">
-    <h1 style="color: cyan; text-shadow: 0 0 10px cyan;">GEOMETRY PRO AI</h1>
-    <div id="level-list"></div>
+    <h1 style="font-size: 50px; text-shadow: 0 0 20px cyan;">ADRIAN'S GEODASH</h1>
+    <div id="lvls"></div>
   </div>
 
   <div id="death-screen" class="menu" style="display:none;">
-    <h2 style="color: #ff0055;">PRACTICE MAKES PERFECT</h2>
-    <button onclick="startLevel(currentLevel)">RETRY (R)</button>
-    <button onclick="backToMenu()">MENU</button>
+    <h2 style="color:red">RETRY?</h2>
+    <button onclick="play(curLvl)">RESTART (R)</button>
+    <button onclick="location.reload()">MENU</button>
   </div>
 </div>
 
@@ -42,184 +42,132 @@ index.html
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let state = "menu";
-let currentLevel = 0;
-let deaths = 0;
-let particles = [];
-let trail = [];
+let state = "menu", curLvl = 0, deaths = 0, particles = [], trail = [];
+let p = { x: 100, y: 270, dy: 0, gravity: 0.9, angle: 0, mode: 'cube', gDir: 1, alive: true };
 
-let player = { x: 100, y: 270, size: 30, dy: 0, gravity: 0.9, angle: 0, speed: 7, alive: true };
-
-// Nivådesign: 's'=spike, 'b'=block, 'o'=jump orb, 'g'=goal
-const levels = [
-  { name: "STEREO AI", color: "#0066ff", length: 3000, obs: [{x:600,t:'s'},{x:900,t:'s'},{x:1200,t:'b'},{x:1240,t:'b'},{x:1600,t:'o',y:180},{x:2000,t:'s'},{x:2800,t:'g'}] },
-  { name: "NEON LIGHTS", color: "#ff00ff", length: 3500, obs: [{x:500,t:'b'},{x:800,t:'s'},{x:840,t:'s'},{x:1200,t:'o',y:150},{x:1500,t:'b'},{x:1540,t:'b'},{x:1800,t:'s'},{x:3300,t:'g'}] },
-  { name: "GRAVITY", color: "#00ff88", length: 4000, obs: [{x:500,t:'s'},{x:1000,t:'o',y:180},{x:1100,t:'o',y:120},{x:1600,t:'b'},{x:2200,t:'s'},{x:2240,t:'s'},{x:3800,t:'g'}] },
-  { name: "DEMONIC", color: "#ff3300", length: 4500, obs: [{x:400,t:'s'},{x:440,t:'s'},{x:800,t:'b'},{x:1200,t:'o',y:200},{x:1500,t:'s'},{x:2000,t:'b'},{x:2040,t:'b'},{x:4300,t:'g'}] },
-  { name: "THE END", color: "#ffffff", length: 6000, obs: [{x:500,t:'s'},{x:1000,t:'o',y:180},{x:1500,t:'s'},{x:2000,t:'o',y:150},{x:2500,t:'s'},{x:3000,t:'b'},{x:5800,t:'g'}] }
+// Typer: s=spike, b=block, o=orb, pS=shipPortal, pC=cubePortal, pG=gravPortal, pN=normalPortal, g=goal
+const levelData = [
+  { name: "GENESIS", color: "#0088ff", length: 5000, obs: [
+    {x:800,t:'s'},{x:1200,t:'b'},{x:1240,t:'b'},{x:1600,t:'o',y:180},{x:2000,t:'pS',y:150},
+    {x:2500,t:'s',y:100},{x:2800,t:'s',y:250},{x:3200,t:'pC',y:150},{x:3600,t:'o',y:200},{x:4800,t:'g'}
+  ]},
+  { name: "GRAVITY RUSH", color: "#ff0088", length: 6000, obs: [
+    {x:600,t:'s'},{x:1000,t:'pG',y:150},{x:1400,t:'s',y:50},{x:1800,t:'pN',y:150},
+    {x:2200,t:'b'},{x:2600,t:'pS',y:150},{x:3500,t:'pG',y:150},{x:5800,t:'g'}
+  ]}
 ];
 
-function backToMenu() {
-  state = "menu";
-  document.getElementById("main-menu").style.display = "block";
-  document.getElementById("death-screen").style.display = "none";
-  document.getElementById("hud").style.display = "none";
-  renderLevelButtons();
-}
-
-function renderLevelButtons() {
-  const list = document.getElementById("level-list");
-  list.innerHTML = "";
-  levels.forEach((l, i) => {
+function renderMenu() {
+  const c = document.getElementById("lvls");
+  levelData.forEach((l, i) => {
     let b = document.createElement("button");
     b.innerText = l.name;
-    b.onclick = () => startLevel(i);
-    list.appendChild(b);
+    b.onclick = () => play(i);
+    c.appendChild(b);
   });
 }
 
-function startLevel(i) {
-  currentLevel = i;
-  state = "play";
-  player = { x: 100, y: 270, size: 30, dy: 0, gravity: 0.9, angle: 0, speed: 7 + (i*0.5), alive: true };
-  particles = [];
-  trail = [];
+function play(i) {
+  curLvl = i; state = "play";
+  p = { x: 100, y: 270, dy: 0, gravity: 0.9, angle: 0, mode: 'cube', gDir: 1, alive: true };
+  trail = []; particles = [];
   document.getElementById("main-menu").style.display = "none";
   document.getElementById("death-screen").style.display = "none";
   document.getElementById("hud").style.display = "flex";
 }
 
-function createExplosion(x, y) {
-  for(let i=0; i<15; i++) {
-    particles.push({x, y, dx: (Math.random()-0.5)*10, dy: (Math.random()-0.5)*10, size: Math.random()*8, life: 1});
-  }
+function explode(x, y) {
+  for(let i=0; i<20; i++) particles.push({x,y,dx:(Math.random()-0.5)*15,dy:(Math.random()-0.5)*15,size:Math.random()*10,l:1});
 }
 
 function die() {
-  if(!player.alive) return;
-  player.alive = false;
-  deaths++;
-  createExplosion(player.x, player.y);
-  setTimeout(() => { 
-    if(state !== "menu") document.getElementById("death-screen").style.display = "block"; 
-  }, 600);
+  if(!p.alive) return;
+  p.alive = false; deaths++; explode(p.x, p.y);
+  setTimeout(() => { if(state==="play") document.getElementById("death-screen").style.display="block"; }, 600);
 }
 
-document.addEventListener("keydown", e => {
-  if(state === "play" && player.alive) {
-    if(e.code === "Space" || e.key === "ArrowUp") {
-      // Sjekk Jump Orb kollisjon
-      let onOrb = false;
-      levels[currentLevel].obs.forEach(o => {
-        if(o.t === 'o' && Math.hypot(player.x - o.x, player.y - o.y) < 60) onOrb = true;
-      });
-      
-      if(player.y >= 265 || onOrb) {
-        player.dy = -13;
-      }
-    }
-    if(e.code === "KeyR") startLevel(currentLevel);
+window.onkeydown = e => {
+  if(state==="play" && p.alive) {
+    if(e.code==="Space" || e.key==="ArrowUp") p.hold = true;
+    if(e.code==="KeyR") play(curLvl);
   }
-});
+};
+window.onkeyup = e => { if(e.code==="Space" || e.key==="ArrowUp") p.hold = false; };
 
 function update() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
+  ctx.clearRect(0,0,900,350);
   if(state === "play") {
-    if(player.alive) {
-      player.dy += player.gravity;
-      player.y += player.dy;
-      player.x += player.speed;
-      
-      if(player.y >= 270) {
-        player.y = 270; player.dy = 0;
-        player.angle = Math.round(player.angle/90)*90;
-      } else {
-        player.angle += 5;
+    if(p.alive) {
+      // Fysikk-håndtering
+      if(p.mode === 'cube') {
+        if(p.hold && (p.y >= 270 || p.y <= 30)) { p.dy = -13 * p.gDir; p.hold = false; }
+        p.dy += p.gravity * p.gDir;
+        p.angle += 6 * p.gDir;
+      } else { // Ship mode
+        p.dy += (p.hold ? -0.5 : 0.5) * p.gDir;
+        p.angle = p.dy * 2;
       }
       
-      trail.push({x: player.x, y: player.y});
-      if(trail.length > 20) trail.shift();
+      p.y += p.dy;
+      p.x += 8;
+
+      // Bakke/Tak sjekk
+      if(p.y > 270) { p.y = 270; p.dy = 0; if(p.mode==='cube') p.angle = Math.round(p.angle/90)*90; }
+      if(p.y < 30) { p.y = 30; p.dy = 0; }
+
+      trail.push({x:p.x, y:p.y}); if(trail.length > 25) trail.shift();
     }
 
-    // Kamera
     ctx.save();
-    ctx.translate(-player.x + 150, 0);
+    ctx.translate(-p.x + 150, 0);
 
-    // Bakgrunnspuls
-    ctx.globalAlpha = 0.2;
-    ctx.fillStyle = levels[currentLevel].color;
-    ctx.fillRect(player.x - 200, 0, 1000, 350);
-    ctx.globalAlpha = 1.0;
+    // Bakgrunnsfarge
+    ctx.globalAlpha = 0.15; ctx.fillStyle = levelData[curLvl].color; ctx.fillRect(p.x-200,0,1000,350); ctx.globalAlpha = 1;
 
     // Tegn Trail
-    ctx.strokeStyle = "cyan";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    trail.forEach((t, i) => ctx.lineTo(t.x+15, t.y+15));
-    ctx.stroke();
+    ctx.strokeStyle = "rgba(0,255,255,0.5)"; ctx.lineWidth=3; ctx.beginPath();
+    trail.forEach(t => ctx.lineTo(t.x+15, t.y+15)); ctx.stroke();
 
-    // Gulv
-    ctx.fillStyle = "#111";
-    ctx.fillRect(player.x - 200, 300, 2000, 50);
-    ctx.strokeStyle = "cyan";
-    ctx.strokeRect(player.x - 200, 300, 2000, 2);
-
-    // Objekter
-    levels[currentLevel].obs.forEach(o => {
-      if(o.t === 's') { // Spike
-        ctx.fillStyle = "#ff0055";
-        ctx.shadowBlur = 15; ctx.shadowColor = "#ff0055";
-        ctx.beginPath(); ctx.moveTo(o.x, 300); ctx.lineTo(o.x+20, 265); ctx.lineTo(o.x+40, 300); ctx.fill();
-        if(player.alive && player.x+25 > o.x && player.x+5 < o.x+35 && player.y+25 > 265) die();
-      } 
-      else if(o.t === 'b') { // Block
-        ctx.fillStyle = "#fff"; ctx.shadowBlur = 10; ctx.shadowColor = "#fff";
-        ctx.fillRect(o.x, 260, 40, 40);
-        if(player.alive && player.x+25 > o.x && player.x+5 < o.x+35 && player.y+25 > 260) die();
+    // Hindringer
+    levelData[curLvl].obs.forEach(o => {
+      ctx.shadowBlur = 10; ctx.shadowColor = "white";
+      if(o.t==='s') { 
+        ctx.fillStyle="red"; ctx.beginPath(); ctx.moveTo(o.x,300); ctx.lineTo(o.x+20,260); ctx.lineTo(o.x+40,300); ctx.fill();
+        if(p.alive && Math.abs(p.x-o.x)<30 && Math.abs(p.y-270)<30) die();
       }
-      else if(o.t === 'o') { // Orb
-        ctx.strokeStyle = "yellow"; ctx.lineWidth = 3; ctx.shadowBlur = 15;
-        ctx.beginPath(); ctx.arc(o.x+15, o.y+15, 20, 0, Math.PI*2); ctx.stroke();
-      }
-      else if(o.t === 'g') { // Goal
-        ctx.fillStyle = "cyan"; ctx.shadowBlur = 20;
-        ctx.fillRect(o.x, 0, 10, 300);
-        if(player.x > o.x) backToMenu();
-      }
+      else if(o.t==='b') { ctx.fillStyle="white"; ctx.fillRect(o.x,260,40,40); if(p.alive && Math.abs(p.x-o.x)<35 && p.y>250) die(); }
+      else if(o.t==='o') { ctx.strokeStyle="yellow"; ctx.beginPath(); ctx.arc(o.x,o.y,20,0,7); ctx.stroke(); if(p.alive && p.hold && Math.hypot(p.x-o.x,p.y-o.y)<50) { p.dy = -12*p.gDir; p.hold=false; }}
+      
+      // Portaler
+      else if(o.t==='pS') { ctx.fillStyle="#00ff00"; ctx.fillRect(o.x,0,20,350); if(p.x>o.x) p.mode='ship'; }
+      else if(o.t==='pC') { ctx.fillStyle="#ff00ff"; ctx.fillRect(o.x,0,20,350); if(p.x>o.x) p.mode='cube'; }
+      else if(o.t==='pG') { ctx.fillStyle="#0000ff"; ctx.fillRect(o.x,0,20,350); if(p.x>o.x-5 && p.x<o.x+5) p.gDir = -1; }
+      else if(o.t==='pN') { ctx.fillStyle="#ffff00"; ctx.fillRect(o.x,0,20,350); if(p.x>o.x-5 && p.x<o.x+5) p.gDir = 1; }
+      else if(o.t==='g') { ctx.fillStyle="cyan"; ctx.fillRect(o.x,0,10,350); if(p.x>o.x) location.reload(); }
       ctx.shadowBlur = 0;
     });
 
-    // Partikler
-    particles.forEach((p, i) => {
-      p.x += p.dx; p.y += p.dy; p.life -= 0.02;
-      ctx.fillStyle = `rgba(255, 255, 255, ${p.life})`;
-      ctx.fillRect(p.x, p.y, p.size, p.size);
-      if(p.life <= 0) particles.splice(i, 1);
-    });
-
     // Spiller
-    if(player.alive) {
-      ctx.save();
-      ctx.translate(player.x+15, player.y+15);
-      ctx.rotate(player.angle * Math.PI/180);
-      ctx.shadowBlur = 15; ctx.shadowColor = "cyan";
-      ctx.fillStyle = "cyan"; ctx.fillRect(-15, -15, 30, 30);
-      ctx.strokeStyle = "white"; ctx.strokeRect(-15, -15, 30, 30);
+    if(p.alive) {
+      ctx.save(); ctx.translate(p.x+15, p.y+15); ctx.rotate(p.angle*Math.PI/180);
+      ctx.fillStyle = p.mode==='cube' ? "cyan" : "#ff00ff";
+      ctx.fillRect(-15,-15,30,30); ctx.strokeStyle="white"; ctx.strokeRect(-15,-15,30,30);
       ctx.restore();
     }
 
-    ctx.restore();
+    // Eksplosjon
+    particles.forEach((pt, i) => {
+      pt.x+=pt.dx; pt.y+=pt.dy; pt.l-=0.02; ctx.fillStyle=`rgba(255,255,255,${pt.l})`;
+      ctx.fillRect(pt.x,pt.y,pt.size,pt.size); if(pt.l<=0) particles.splice(i,1);
+    });
 
-    // UI Update
-    document.getElementById("bar-fill").style.width = (player.x / levels[currentLevel].length * 100) + "%";
-    document.getElementById("death-text").innerText = "DEATHS: " + deaths;
+    ctx.restore();
+    document.getElementById("fill").style.width = (p.x/levelData[curLvl].length*100)+"%";
+    document.getElementById("stats").innerText = `ADRIAN'S GEODASH - DEATHS: ${deaths}`;
   }
   requestAnimationFrame(update);
 }
-
-renderLevelButtons();
-update();
+renderMenu(); update();
 </script>
 </body>
 </html>
