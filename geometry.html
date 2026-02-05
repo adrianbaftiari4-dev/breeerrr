@@ -3,21 +3,22 @@ index.html
 <html lang="no">
 <head>
 <meta charset="UTF-8">
-<title>Geometry Dash – Not Bad Edition</title>
+<title>Geometry Dash – Browser Edition</title>
 <style>
-  body {
-    margin: 0;
-    background: radial-gradient(circle at top, #111 0%, #000 70%);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-  }
-  canvas {
-    background: linear-gradient(#1e1e1e, #0b0b0b);
-    border: 3px solid #00ffff;
-    box-shadow: 0 0 40px #00ffff;
-  }
+body {
+  margin: 0;
+  background: radial-gradient(#111, #000);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+}
+canvas {
+  background: linear-gradient(#1a1a1a, #0b0b0b);
+  border: 3px solid #00ffff;
+  box-shadow: 0 0 40px #00ffff;
+}
 </style>
 </head>
 <body>
@@ -28,12 +29,146 @@ index.html
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let shake = 0;
+let state = "menu"; // menu, levels, play
+let currentLevel = 0;
+let mode = "cube"; // cube, ship, wave
+
+const levels = [
+  {
+    name: "Level 1 – Stereo Start",
+    spikes: [400, 550, 700]
+  },
+  {
+    name: "Level 2 – Air Trouble",
+    spikes: [350, 500, 650, 800]
+  },
+  {
+    name: "Level 3 – Wave Madness",
+    spikes: [300, 450, 600, 750]
+  }
+];
 
 let player = {
-  x: 140,
+  x: 120,
   y: 260,
   size: 30,
   dy: 0,
-  gravity: 0.85,
-  jump: -
+  gravity: 0.9,
+  angle: 0,
+  alive: true
+};
+
+document.addEventListener("keydown", () => {
+  if (state === "menu") state = "levels";
+  else if (state === "levels") {
+    currentLevel = 0;
+    startLevel();
+  } else if (state === "play") {
+    if (mode === "cube" && player.y >= 260) {
+      player.dy = -15;
+    }
+  }
+});
+
+function startLevel() {
+  state = "play";
+  player.y = 260;
+  player.dy = 0;
+  player.angle = 0;
+  player.alive = true;
+}
+
+function drawMenu() {
+  ctx.fillStyle = "#0ff";
+  ctx.font = "48px Arial";
+  ctx.fillText("GEOMETRY DASH", 200, 150);
+  ctx.font = "20px Arial";
+  ctx.fillText("Press any key", 360, 200);
+}
+
+function drawLevels() {
+  ctx.fillStyle = "#fff";
+  ctx.font = "32px Arial";
+  ctx.fillText("Select Level", 330, 80);
+  levels.forEach((l, i) => {
+    ctx.fillText(`${i+1}. ${l.name}`, 250, 140 + i * 50);
+  });
+  ctx.font = "16px Arial";
+  ctx.fillText("Press any key to start", 330, 300);
+}
+
+function drawPlayer() {
+  ctx.save();
+  ctx.translate(player.x + 15, player.y + 15);
+  ctx.rotate(player.angle);
+  ctx.fillStyle = "#00ffff";
+  ctx.fillRect(-15, -15, 30, 30);
+  ctx.restore();
+}
+
+function drawSpikes(level) {
+  ctx.fillStyle = "#ff0044";
+  level.spikes.forEach(x => {
+    ctx.beginPath();
+    ctx.moveTo(x, 300);
+    ctx.lineTo(x + 20, 260);
+    ctx.lineTo(x + 40, 300);
+    ctx.fill();
+
+    if (
+      player.x + 30 > x &&
+      player.x < x + 40 &&
+      player.y + 30 > 260
+    ) {
+      player.alive = false;
+    }
+  });
+}
+
+function update() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if (state === "menu") {
+    drawMenu();
+  }
+
+  if (state === "levels") {
+    drawLevels();
+  }
+
+  if (state === "play") {
+    if (!player.alive) {
+      ctx.fillStyle = "#fff";
+      ctx.font = "40px Arial";
+      ctx.fillText("YOU DIED", 350, 180);
+      ctx.font = "20px Arial";
+      ctx.fillText("Refresh to retry", 360, 220);
+      return;
+    }
+
+    player.dy += player.gravity;
+    player.y += player.dy;
+
+    if (player.y >= 260) {
+      player.y = 260;
+      player.dy = 0;
+    } else {
+      player.angle += 0.15;
+    }
+
+    drawPlayer();
+    drawSpikes(levels[currentLevel]);
+
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 300, canvas.width, 4);
+  }
+
+  requestAnimationFrame(update);
+}
+
+update();
+</script>
+
+</body>
+</html>
+ 
