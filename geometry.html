@@ -3,20 +3,20 @@ index.html
 <html lang="no">
 <head>
 <meta charset="UTF-8">
-<title>Not Trash Geometry Dash</title>
+<title>Geometry Dash – Not Bad Edition</title>
 <style>
   body {
     margin: 0;
-    background: radial-gradient(#111, #000);
+    background: radial-gradient(circle at top, #111 0%, #000 70%);
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
   }
   canvas {
-    background: linear-gradient(#1b1b1b, #111);
-    border: 3px solid #0ff;
-    box-shadow: 0 0 30px #0ff;
+    background: linear-gradient(#1e1e1e, #0b0b0b);
+    border: 3px solid #00ffff;
+    box-shadow: 0 0 40px #00ffff;
   }
 </style>
 </head>
@@ -28,117 +28,12 @@ index.html
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+let shake = 0;
+
 let player = {
-  x: 120,
+  x: 140,
   y: 260,
   size: 30,
   dy: 0,
-  gravity: 0.9,
-  jump: -16,
-  angle: 0,
-  grounded: true
-};
-
-let spikes = [];
-let speed = 5;
-let alive = true;
-let progress = 0;
-
-function spawnSpike() {
-  spikes.push({
-    x: canvas.width,
-    y: 285,
-    w: 30,
-    h: 40
-  });
-}
-
-setInterval(spawnSpike, 1200);
-
-document.addEventListener("keydown", () => {
-  if (player.grounded && alive) {
-    player.dy = player.jump;
-    player.grounded = false;
-  }
-  if (!alive) location.reload();
-});
-
-function drawPlayer() {
-  ctx.save();
-  ctx.translate(player.x + player.size / 2, player.y + player.size / 2);
-  ctx.rotate(player.angle);
-  ctx.fillStyle = "#00ffff";
-  ctx.shadowColor = "#00ffff";
-  ctx.shadowBlur = 20;
-  ctx.fillRect(-15, -15, 30, 30);
-  ctx.restore();
-}
-
-function update() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // physics
-  player.dy += player.gravity;
-  player.y += player.dy;
-
-  if (player.y >= 260) {
-    player.y = 260;
-    player.dy = 0;
-    player.grounded = true;
-    player.angle = Math.round(player.angle / (Math.PI/2)) * (Math.PI/2);
-  } else {
-    player.angle += 0.15;
-  }
-
-  drawPlayer();
-
-  // ground
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 300, canvas.width, 4);
-
-  // spikes
-  ctx.fillStyle = "#ff0044";
-  spikes.forEach(s => {
-    s.x -= speed;
-    ctx.beginPath();
-    ctx.moveTo(s.x, s.y + s.h);
-    ctx.lineTo(s.x + s.w / 2, s.y);
-    ctx.lineTo(s.x + s.w, s.y + s.h);
-    ctx.fill();
-
-    if (
-      player.x < s.x + s.w &&
-      player.x + player.size > s.x &&
-      player.y < s.y + s.h &&
-      player.y + player.size > s.y
-    ) {
-      alive = false;
-    }
-  });
-
-  spikes = spikes.filter(s => s.x + s.w > 0);
-
-  // progress
-  progress += 0.1;
-  speed = 5 + progress / 150;
-
-  ctx.fillStyle = "#0ff";
-  ctx.fillRect(0, 0, progress % canvas.width, 6);
-
-  if (!alive) {
-    ctx.fillStyle = "#fff";
-    ctx.font = "48px Arial";
-    ctx.fillText("YOU DIED", 330, 170);
-    ctx.font = "20px Arial";
-    ctx.fillText("Press any key to retry", 360, 210);
-    return;
-  }
-
-  requestAnimationFrame(update);
-}
-
-update();
-</script>
-
-</body>
-</html>
+  gravity: 0.85,
+  jump: -
