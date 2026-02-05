@@ -3,13 +3,14 @@ index.htmlx
 <html lang="no">
 <head>
 <meta charset="UTF-8">
-<title>Adrian's geodash - Pro Edition</title>
+<title>Adrian's Geodash - Ultimate Edition</title>
 <style>
   body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
-  canvas { border: 4px solid #444; box-shadow: 0 0 80px rgba(0,255,255,0.2); background: #010103; }
+  canvas { border: 4px solid #444; box-shadow: 0 0 100px rgba(0,255,255,0.15); background: #010103; }
   #ui { position: absolute; text-align: center; pointer-events: none; width: 900px; height: 350px; color: white; }
-  .menu { pointer-events: auto; background: rgba(0,0,0,0.9); padding: 30px; border: 3px solid cyan; border-radius: 15px; display: inline-block; margin-top: 20px; }
-  button { padding: 12px 30px; font-size: 18px; cursor: pointer; border: none; background: cyan; color: black; font-weight: bold; margin: 8px; border-radius: 5px; transition: 0.2s; }
+  .menu { pointer-events: auto; background: rgba(0,0,0,0.95); padding: 30px; border: 3px solid cyan; border-radius: 15px; display: inline-block; }
+  .level-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
+  button { padding: 10px; font-size: 14px; cursor: pointer; border: none; background: cyan; color: black; font-weight: bold; border-radius: 5px; transition: 0.2s; }
   button:hover { background: magenta; transform: scale(1.1); color: white; }
   .hud { position: absolute; top: 15px; width: 100%; display: flex; flex-direction: column; align-items: center; }
   .bar { width: 80%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 10px; border: 1px solid #555; overflow: hidden; }
@@ -21,17 +22,16 @@ index.htmlx
 <div id="ui">
   <div id="hud" class="hud" style="display:none;">
     <div class="bar"><div id="fill"></div></div>
-    <div id="stats" style="margin-top:5px; font-size:14px; letter-spacing:3px;">ADRIAN'S GEODASH - DEATHS: 0</div>
+    <div id="stats" style="margin-top:5px; font-size:14px; letter-spacing:3px; text-shadow: 2px 2px #000;">ADRIAN'S GEODASH - DEATHS: 0</div>
   </div>
   
   <div id="main-menu" class="menu">
-    <h1 style="font-size: 45px; margin: 10px; text-shadow: 0 0 15px cyan;">ADRIAN'S GEODASH</h1>
-    <p>SELECT LEVEL</p>
-    <div id="level-selection"></div>
+    <h1 style="font-size: 40px; margin: 0; text-shadow: 0 0 15px cyan;">ADRIAN'S GEODASH</h1>
+    <div class="level-grid" id="level-selection"></div>
   </div>
 
   <div id="death-menu" class="menu" style="display:none;">
-    <h1 style="color:red; margin:10px;">WASTED</h1>
+    <h1 style="color:red; margin:10px;">CRASHED</h1>
     <button onclick="startLevel(curLvl)">RETRY (R)</button>
     <button onclick="location.reload()">MENU</button>
   </div>
@@ -46,11 +46,16 @@ const ctx = canvas.getContext("2d");
 let state = "menu", curLvl = 0, deaths = 0, particles = [], trail = [], shake = 0;
 let p = { x: 100, y: 270, dy: 0, gravity: 0.9, angle: 0, mode: 'cube', gDir: 1, alive: true, hold: false };
 
-// TYPER: s=spike, b=block, o=orb, pS=shipPortal(grønn), pC=cubePortal(lilla), pG=gravPortal(blå), pN=normalPortal(gul), g=goal
+// TYPER: s=spike, b=block, o=orb, pS=shipPortal, pC=cubePortal, pG=gravPortal, pN=normalPortal, g=goal
 const levelData = [
-  { name: "THE BEGINNING", color: "#0055ff", len: 4000, obs: [{x:700,t:'s'},{x:1100,t:'b'},{x:1500,t:'pS',y:150},{x:2000,t:'s',y:50},{x:2400,t:'s',y:280},{x:3000,t:'pC',y:150},{x:3800,t:'g'}] },
-  { name: "UPSIDE DOWN", color: "#aa00ff", len: 5000, obs: [{x:600,t:'s'},{x:1000,t:'pG',y:150},{x:1500,t:'s',y:60},{x:2000,t:'o',y:80},{x:2500,t:'pN',y:150},{x:3000,t:'s'},{x:4800,t:'g'}] },
-  { name: "ADRIAN'S DEMON", color: "#ff0044", len: 6500, obs: [{x:500,t:'s'},{x:800,t:'pS',y:150},{x:1300,t:'pG',y:150},{x:1800,t:'s',y:50},{x:2200,t:'o',y:100},{x:2600,t:'pN',y:150},{x:3000,t:'pC',y:150},{x:3500,t:'s'},{x:4000,t:'s'},{x:6300,t:'g'}] }
+  { name: "1. Genesis", color: "#0055ff", len: 4000, obs: [{x:800,t:'s'},{x:1200,t:'b'},{x:1600,t:'pS',y:150},{x:2200,t:'s',y:50},{x:2800,t:'pC',y:150},{x:3800,t:'g'}] },
+  { name: "2. Orbit", color: "#aa00ff", len: 4500, obs: [{x:600,t:'s'},{x:1000,t:'pG',y:150},{x:1500,t:'o',y:80},{x:2000,t:'pN',y:150},{x:2500,t:'pS',y:150},{x:4300,t:'g'}] },
+  { name: "3. Pulse", color: "#ff0044", len: 5000, obs: [{x:500,t:'s'},{x:900,t:'pS',y:150},{x:1400,t:'s',y:50},{x:1900,t:'o',y:120},{x:2400,t:'pC',y:150},{x:4800,t:'g'}] },
+  { name: "4. Gravity", color: "#00ff88", len: 5500, obs: [{x:700,t:'pG',y:150},{x:1200,t:'s',y:40},{x:1700,t:'pN',y:150},{x:2200,t:'o',y:100},{x:3000,t:'pS',y:150},{x:5300,t:'g'}] },
+  { name: "5. Dark", color: "#333", len: 6000, obs: [{x:600,t:'b'},{x:1000,t:'s'},{x:1500,t:'pS',y:150},{x:2500,t:'pG',y:150},{x:3500,t:'pC',y:150},{x:5800,t:'g'}] },
+  { name: "6. Dash", color: "#ff8800", len: 6500, obs: [{x:800,t:'s'},{x:1200,t:'o',y:180},{x:1600,t:'o',y:120},{x:2500,t:'pS',y:150},{x:4000,t:'pG',y:150},{x:6300,t:'g'}] },
+  { name: "7. Ether", color: "#00ffff", len: 7000, obs: [{x:500,t:'s'},{x:1500,t:'pS',y:150},{x:3000,t:'pG',y:150},{x:4500,t:'pN',y:150},{x:5500,t:'pC',y:150},{x:6800,t:'g'}] },
+  { name: "8. DEMON", color: "#ff0000", len: 9000, obs: [{x:400,t:'s'},{x:800,t:'pS',y:150},{x:1500,t:'pG',y:150},{x:2500,t:'pN',y:150},{x:3500,t:'o',y:100},{x:4500,t:'pC',y:150},{x:8800,t:'g'}] }
 ];
 
 function initMenu() {
@@ -80,20 +85,13 @@ function drawPlayer() {
   ctx.shadowColor = p.mode === 'cube' ? "cyan" : "magenta";
   
   if(p.mode === 'cube') {
-    // Kube-avatar
-    ctx.fillStyle = "cyan";
-    ctx.fillRect(-15, -15, 30, 30);
-    ctx.strokeStyle = "white"; ctx.lineWidth = 2;
-    ctx.strokeRect(-15, -15, 30, 30);
-    // Øyne
-    ctx.fillStyle = "black";
-    ctx.fillRect(5, -10, 5, 5); ctx.fillRect(5, 5, 5, 5);
+    ctx.fillStyle = "cyan"; ctx.fillRect(-15, -15, 30, 30);
+    ctx.strokeStyle = "white"; ctx.lineWidth = 2; ctx.strokeRect(-15, -15, 30, 30);
+    ctx.fillStyle = "black"; ctx.fillRect(5, -10, 5, 5); ctx.fillRect(5, 5, 5, 5); // Øyne
   } else {
-    // Skip-avatar
-    ctx.fillStyle = "magenta";
-    ctx.beginPath();
-    ctx.moveTo(-15, 0); ctx.lineTo(15, -10); ctx.lineTo(15, 10); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = "cyan"; ctx.fillRect(0, -5, 10, 10); // "Cockpit"
+    ctx.fillStyle = "magenta"; ctx.beginPath();
+    ctx.moveTo(-15, 0); ctx.lineTo(15, -12); ctx.lineTo(15, 12); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "cyan"; ctx.fillRect(0, -5, 10, 10);
   }
   ctx.restore();
 }
@@ -102,13 +100,8 @@ function drawPortal(x, y, color) {
   ctx.save();
   ctx.shadowBlur = 20; ctx.shadowColor = color;
   ctx.strokeStyle = color; ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.ellipse(x+10, y+50, 20, 80, 0, 0, Math.PI*2);
-  ctx.stroke();
-  // Partikler inni portalen
-  ctx.globalAlpha = 0.3;
-  ctx.fillStyle = color;
-  ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+10, y+50, 25, 85, 0, 0, Math.PI*2); ctx.stroke();
+  ctx.globalAlpha = 0.2; ctx.fillStyle = color; ctx.fill();
   ctx.restore();
 }
 
@@ -121,43 +114,36 @@ function update() {
         p.dy += p.gravity * p.gDir;
         p.angle += 7 * p.gDir;
       } else {
-        p.dy += (p.hold ? -0.6 : 0.6) * p.gDir;
-        p.angle = p.dy * 3;
+        p.dy += (p.hold ? -0.7 : 0.7) * p.gDir;
+        p.angle = p.dy * 4;
       }
-      p.y += p.dy; p.x += 8.5;
+      p.y += p.dy; p.x += 9;
 
       if(p.y > 270) { p.y = 270; p.dy = 0; if(p.mode==='cube') p.angle = Math.round(p.angle/90)*90; }
       if(p.y < 30) { p.y = 30; p.dy = 0; if(p.mode==='cube') p.angle = Math.round(p.angle/90)*90; }
-
       trail.push({x:p.x, y:p.y}); if(trail.length > 20) trail.shift();
     }
 
     ctx.save();
-    if(shake > 0) { ctx.translate(Math.random()*shake, Math.random()*shake); shake *= 0.9; }
+    if(shake > 0) { ctx.translate(Math.random()*shake, Math.random()*shake); shake *= 0.8; }
     ctx.translate(-p.x + 150, 0);
 
     // Bakgrunn
     ctx.globalAlpha = 0.1; ctx.fillStyle = levelData[curLvl].color; ctx.fillRect(p.x-200, 0, 1000, 350); ctx.globalAlpha = 1;
 
-    // Trail
-    ctx.strokeStyle = "cyan"; ctx.lineWidth = 2; ctx.beginPath();
-    trail.forEach(t => ctx.lineTo(t.x+15, t.y+15)); ctx.stroke();
-
     // Objekter
     levelData[curLvl].obs.forEach(o => {
       if(o.t==='s') {
         ctx.fillStyle="#ff4444"; ctx.beginPath(); ctx.moveTo(o.x,300); ctx.lineTo(o.x+20,260); ctx.lineTo(o.x+40,300); ctx.fill();
-        if(p.alive && Math.abs(p.x-o.x)<30 && Math.abs(p.y-(o.y||270))<30) { p.alive=false; deaths++; shake=10; setTimeout(()=>document.getElementById("death-menu").style.display="block",600); }
+        if(p.alive && Math.abs(p.x-o.x)<30 && Math.abs(p.y-(o.y||270))<35) { p.alive=false; deaths++; shake=12; setTimeout(()=>document.getElementById("death-menu").style.display="block",500); }
       }
-      else if(o.t==='b') { ctx.fillStyle="#fff"; ctx.fillRect(o.x, 260, 40, 40); if(p.alive && Math.abs(p.x-o.x)<35 && p.y>250) { p.alive=false; deaths++; shake=10; setTimeout(()=>document.getElementById("death-menu").style.display="block",600); } }
-      else if(o.t==='o') { ctx.strokeStyle="yellow"; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(o.x,o.y,20,0,7); ctx.stroke(); if(p.alive && p.hold && Math.hypot(p.x-o.x,p.y-o.y)<50){p.dy=-12*p.gDir; p.hold=false;}}
-      
-      // Portaler
+      else if(o.t==='b') { ctx.fillStyle="#fff"; ctx.fillRect(o.x, 260, 40, 40); if(p.alive && Math.abs(p.x-o.x)<35 && p.y>255) { p.alive=false; deaths++; shake=12; setTimeout(()=>document.getElementById("death-menu").style.display="block",500); } }
+      else if(o.t==='o') { ctx.strokeStyle="yellow"; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(o.x,o.y,20,0,7); ctx.stroke(); if(p.alive && p.hold && Math.hypot(p.x-o.x,p.y-o.y)<60){p.dy=-13*p.gDir; p.hold=false;}}
       else if(o.t==='pS') { drawPortal(o.x, o.y-50, "#00ff00"); if(p.x > o.x) p.mode='ship'; }
       else if(o.t==='pC') { drawPortal(o.x, o.y-50, "#ff00ff"); if(p.x > o.x) p.mode='cube'; }
       else if(o.t==='pG') { drawPortal(o.x, o.y-50, "#0088ff"); if(p.x > o.x-5 && p.x < o.x+5) p.gDir = -1; }
       else if(o.t==='pN') { drawPortal(o.x, o.y-50, "#ffff00"); if(p.x > o.x-5 && p.x < o.x+5) p.gDir = 1; }
-      else if(o.t==='g') { ctx.fillStyle="cyan"; ctx.fillRect(o.x,0,10,350); if(p.x > o.x) location.reload(); }
+      else if(o.t==='g') { ctx.fillStyle="cyan"; ctx.fillRect(o.x,0,15,350); if(p.x > o.x) location.reload(); }
     });
 
     drawPlayer();
@@ -171,7 +157,6 @@ function update() {
 
 window.onkeydown = e => { if(e.code==="Space" || e.key==="ArrowUp") p.hold = true; if(e.code==="KeyR") startLevel(curLvl); };
 window.onkeyup = e => { if(e.code==="Space" || e.key==="ArrowUp") p.hold = false; };
-
 initMenu(); update();
 </script>
 </body>
